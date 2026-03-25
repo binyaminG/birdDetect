@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>זיהוי ראשים בזמן אמת</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
+        .container { position: relative; display: inline-block; margin-top: 20px; }
+        video, canvas { border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+        .status { margin: 10px; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>מערכת זיהוי ראשים</h1>
+    <p id="status" class="status">טוען מודל...</p>
+
+
+
+    <div class="container">
+        <video id="webcam" width="640" height="480" controls loop muted autoplay crossorigin="anonymous">
+            <source src="pigeon3.mp4" type="video/mp4">
+        </video>
+        <canvas id="canvas" style="position: absolute; top: 0; left: 0;"></canvas>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

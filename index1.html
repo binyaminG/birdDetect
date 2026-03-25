@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bird Detection TensorFlow.js</title>
+    <style>
+        .container {
+            position: relative;
+            display: inline-block; /* גורם לדיב לעטוף בדיוק את הווידאו */
+        }
+
+        video {
+            display: block;
+            width: 640px; /* או כל גודל שתרצה */
+            height: auto;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none; /* מאפשר ללחוץ על כפתורי הווידאו דרך הקנבס */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <video id="myVideo" width="640" height="480" controls>
+            <source src="birds_video.mp4" type="video/mp4">
+        </video>
+        <canvas id="myCanvas"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="birdJS.js"></script>
+</body>
+</html>
