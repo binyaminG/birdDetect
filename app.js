@@ -4,6 +4,7 @@ const statusText = document.getElementById('status');
 const ctx = canvas.getContext('2d');
 
 let model;
+let frameCount = 0;
 
 // הגדרות המודל - וודא שהן תואמות לייצוא מה-Colab
 const IMGSZ = 320;
@@ -37,23 +38,25 @@ function startDetection() {
 
 async function detectFrame() {
     if (video.paused || video.ended) return;
-
-    // 1. עיבוד מקדים (Pre-processing)
-    const input = tf.tidy(() => {
-        let img = tf.browser.fromPixels(video);
-
-        // אם התוצאות עדיין לא טובות, נסה להוסיף את השורה הבאה:
-        // img = img.reverse(2); // היפוך RGB ל-BGR
-
-        return img.resizeBilinear([IMGSZ, IMGSZ])
-                  .toFloat()
-                  .div(255.0)
-                  .expandDims(0);
-    });
-
-
-    // 2. הרצת המודל
-    const res = model.execute(input);
+    frameCount++;
+    if (frameCount % 3 === 0) {
+        // 1. עיבוד מקדים (Pre-processing)
+        const input = tf.tidy(() => {
+            let img = tf.browser.fromPixels(video);
+    
+            // אם התוצאות עדיין לא טובות, נסה להוסיף את השורה הבאה:
+            // img = img.reverse(2); // היפוך RGB ל-BGR
+    
+            return img.resizeBilinear([IMGSZ, IMGSZ])
+                      .toFloat()
+                      .div(255.0)
+                      .expandDims(0);
+        });
+    
+    
+        // 2. הרצת המודל
+        const res = model.execute(input);
+    }
 
     // 3. עיבוד תוצאות (Post-processing)
     const detections = tf.tidy(() => {
