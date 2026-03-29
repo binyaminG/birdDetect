@@ -41,33 +41,25 @@ async function detectFrame() {
     
     frameCount++;
 
-    // 1. מריצים את המודל ומעדכנים את הריבועים רק פעם ב-3 פריימים
+    // מריצים את המודל ומעדכנים את הריבועים רק פעם ב-3 פריימים
     if (frameCount % 3 === 0) {
         
         const detections = tf.tidy(() => {
-            // א. עיבוד מקדים (Pre-processing)
+            // 1. עיבוד מקדים
             let img = tf.browser.fromPixels(video);
-            
-            // במידה והתוצאות הפוכות/לא טובות, בטל את ה-comment מהשורה הבאה:
-            // img = img.reverse(2); 
-            
             const input = img.resizeBilinear([IMGSZ, IMGSZ])
                              .toFloat()
                              .div(255.0)
                              .expandDims(0);
 
-            // ב. הרצת המודל (res נוצר כאן בתוך הבלוק!)
+            // 2. הרצת המודל (כאן נוצר res)
             const res = model.execute(input);
 
-            // ג. עיבוד תוצאות (Post-processing)
-            // ניגש לאינדקסים של res רק עכשיו כשהוא בטוח נוצר
+            // 3. עיבוד תוצאות
             const rawBoxes = res[0];
             const rawLogits = res[1];
-
-            // המרה לסיגמואיד
             const rawScores = tf.sigmoid(rawLogits);
 
-            // שולחים החוצה מ-tidy רק מערכי JS פשוטים (Numbers)
             return {
                 boxes: rawBoxes.squeeze().arraySync(),
                 scores: rawScores.squeeze().arraySync(),
@@ -75,11 +67,11 @@ async function detectFrame() {
             };
         });
 
-        // 2. ציור התיבות על הקנבס (רק בפריים שבו התבצע זיהוי)
+        // 4. ציור התיבות על הקנבס
         drawBoxes(detections);
     }
 
-    // 3. בקשה לפריים הבא - קורה תמיד כדי שהוידאו ימשיך לרוץ חלק
+    // 5. בקשה לפריים הבא - תמיד בסוף!
     requestAnimationFrame(detectFrame);
 }
 
