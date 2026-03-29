@@ -41,14 +41,14 @@ async function detectFrame() {
     
     frameCount++;
 
-    // 1. דילוג על פריימים - מריצים את המודל רק כל פריים שלישי
+    // 1. מריצים את המודל ומעדכנים את הריבועים רק פעם ב-3 פריימים
     if (frameCount % 3 === 0) {
         
         const detections = tf.tidy(() => {
-            // עיבוד מקדים (Pre-processing)
+            // א. עיבוד מקדים (Pre-processing)
             let img = tf.browser.fromPixels(video);
             
-            // אם התוצאות הפוכות/לא טובות, בטל את ה-comment מהשורה הבאה:
+            // במידה והתוצאות הפוכות/לא טובות, בטל את ה-comment מהשורה הבאה:
             // img = img.reverse(2); 
             
             const input = img.resizeBilinear([IMGSZ, IMGSZ])
@@ -56,17 +56,18 @@ async function detectFrame() {
                              .div(255.0)
                              .expandDims(0);
 
-            // 2. הרצת המודל (חייב להיות בתוך ה-tidy כדי ש-input ישוחרר אוטומטית)
+            // ב. הרצת המודל (res נוצר כאן בתוך הבלוק!)
             const res = model.execute(input);
 
-            // 3. עיבוד תוצאות (Post-processing)
+            // ג. עיבוד תוצאות (Post-processing)
+            // ניגש לאינדקסים של res רק עכשיו כשהוא בטוח נוצר
             const rawBoxes = res[0];
             const rawLogits = res[1];
 
-            // המרה לסיגמואיד כדי לטפל במספרים השליליים
+            // המרה לסיגמואיד
             const rawScores = tf.sigmoid(rawLogits);
 
-            // מחזירים רק מערכי JS פשוטים החוצה מה-tidy
+            // שולחים החוצה מ-tidy רק מערכי JS פשוטים (Numbers)
             return {
                 boxes: rawBoxes.squeeze().arraySync(),
                 scores: rawScores.squeeze().arraySync(),
@@ -74,11 +75,11 @@ async function detectFrame() {
             };
         });
 
-        // 4. ציור התיבות על הקנבס
+        // 2. ציור התיבות על הקנבס (רק בפריים שבו התבצע זיהוי)
         drawBoxes(detections);
     }
 
-    // 5. בקשה לפריים הבא (קורה בכל פריים כדי לשמור על וידאו חלק)
+    // 3. בקשה לפריים הבא - קורה תמיד כדי שהוידאו ימשיך לרוץ חלק
     requestAnimationFrame(detectFrame);
 }
 
