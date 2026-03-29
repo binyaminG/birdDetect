@@ -5,6 +5,9 @@ const ctx = canvas.getContext('2d');
 
 let model;
 let frameCount = 0;
+let lastGeminiCheck = 0;
+const CHECK_INTERVAL = 60000; // דקה אחת במילישניות
+let geminiOffset = { dx: 0, dy: 0 }; // ההזחה שנשמור
 
 // הגדרות המודל - וודא שהן תואמות לייצוא מה-Colab
 const IMGSZ = 320;
@@ -27,6 +30,54 @@ async function setupApp() {
     } catch (e) {
         console.error("❌ שגיאה בטעינה:", e);
         statusText.innerText = "שגיאה בטעינה: " + e.message;
+    }
+}
+
+async function checkWithGemini(videoElement, yoloBox) {
+    console.log("מבצע אימות מול Google AI...");
+    
+    // 1. חילוץ התמונה מהוידאו בפורמט Base64
+    const canvas = document.createElement('canvas');
+    canvas.width = videoElement.videoWidth;
+    canvas.height = videoElement.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoElement, 0, 0);
+    const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+
+    // 2. בניית הפרומפט
+    const prompt = `Identify the bounding box of the bird's HEAD in this image. 
+    Return ONLY a JSON object in this format: {"ymin": percentage, "xmin": percentage, "ymax": percentage, "xmax": percentage}.
+    The percentages should be integers between 0 and 1000 based on the image dimensions.`;
+
+    try {
+        // קריאה ל-Gemini (ודא שהגדרת את ה-API Key שלך קודם לכן)
+        const response = await model.generateContent([
+            prompt,
+            { inlineData: { data: base64Image, mimeType: "image/jpeg" } }
+        ]);
+        
+        const text = response.response.text();
+        const geminiBox = JSON.parse(text.trim()); // חילוץ ה-JSON
+        
+        // 3. השוואה וחישוב ההזחה (Offset)
+        // נניח ש-yoloBox מגיע בערכים מנורמלים 0-1000
+        const yoloCenter = {
+            x: (yoloBox.xmin + yoloBox.xmax) / 2,
+            y: (yoloBox.ymin + yoloBox.ymax) / 2
+        };
+        const geminiCenter = {
+            x: (geminiBox.xmin + geminiBox.xmax) / 2,
+            y: (geminiBox.ymin + geminiBox.ymax) / 2
+        };
+
+        // חישוב ההפרש
+        geminiOffset.dx = geminiCenter.x - yoloCenter.x;
+        geminiOffset.dy = geminiCenter.y - yoloCenter.y;
+
+        console.log(`הזחה מחושבת: X=${geminiOffset.dx.toFixed(2)}, Y=${geminiOffset.dy.toFixed(2)}`);
+        
+    } catch (error) {
+        console.error("שגיאה בפנייה ל-Gemini:", error);
     }
 }
 
@@ -67,10 +118,37 @@ async function detectFrame() {
             };
         });
 
-        // 4. ציור התיבות על הקנבס
-        drawBoxes(detections);
-    }
+        // מציאת התיבה עם הציון הגבוה ביותר
+        const bestDetectionIndex = detections.scores.indexOf(Math.max(...detections.scores));
+        
+        if (bestDetectionIndex !== -1 && detections.scores[bestDetectionIndex] > 0.8) {
+            const now = Date.now();
+            
+            // בדיקה אם עברה דקה מאז הפעם האחרונה
+            if (now - lastGeminiCheck > CHECK_INTERVAL) {
+                lastGeminiCheck = now;
+                
+                const bestBox = detections.boxes[bestDetectionIndex]; // נניח שזה אובייקט עם xmin, ymin וכו'
+                
+                // שליחה ל-Gemini ברקע (בלי לעצור את הוידאו)
+                checkWithGemini(video, bestBox);
+            }
+        }
 
+        // מחילים את ההזחה שנשמרה על התיבות לפני הציור
+        const adjustedDetections = {
+            ...detections,
+            boxes: detections.boxes.map(box => ({
+                xmin: box.xmin + geminiOffset.dx,
+                xmax: box.xmax + geminiOffset.dx,
+                ymin: box.ymin + geminiOffset.dy,
+                ymax: box.ymax + geminiOffset.dy
+            }))
+        };
+
+        // ציור התיבות המוסטות
+        drawBoxes(adjustedDetections);
+    }
     // 5. בקשה לפריים הבא - תמיד בסוף!
     requestAnimationFrame(detectFrame);
 }
@@ -115,5 +193,7 @@ function drawBoxes(detections) {
         }
     }
 }
+
+
 
 setupApp();
