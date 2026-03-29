@@ -164,6 +164,7 @@ function drawBoxes(detections) {
 
     for (let i = 0; i < scores.length; i++) {
         if (scores[i] > CONF_THRESHOLD) {
+            console.log(boxes[i]);
             // קבלת הערכים המנורמלים (0-1) כפי שראינו בלוגים
             let [x_center, y_center, width, height] = boxes[i];
 
