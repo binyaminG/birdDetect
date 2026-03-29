@@ -161,10 +161,11 @@ function drawBoxes(detections) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const { boxes, scores } = detections;
+    console.log(boxes[i]);
 
     for (let i = 0; i < scores.length; i++) {
         if (scores[i] > CONF_THRESHOLD) {
-            console.log(boxes[i]);
+            
             // קבלת הערכים המנורמלים (0-1) כפי שראינו בלוגים
             let [x_center, y_center, width, height] = boxes[i];
 
