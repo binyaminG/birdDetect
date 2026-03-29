@@ -118,33 +118,28 @@ async function detectFrame() {
             };
         });
 
-        // מציאת התיבה עם הציון הגבוה ביותר
-        const bestDetectionIndex = detections.scores.indexOf(Math.max(...detections.scores));
+        // בדיקת הגנה: מוודאים ש-geminiOffset מכיל מספרים תקינים
+        const dx = (typeof geminiOffset.dx === 'number' && !isNaN(geminiOffset.dx)) ? geminiOffset.dx : 0;
+        const dy = (typeof geminiOffset.dy === 'number' && !isNaN(geminiOffset.dy)) ? geminiOffset.dy : 0;
         
-        if (bestDetectionIndex !== -1 && detections.scores[bestDetectionIndex] > 0.8) {
-            const now = Date.now();
-            
-            // בדיקה אם עברה דקה מאז הפעם האחרונה
-            if (now - lastGeminiCheck > CHECK_INTERVAL) {
-                lastGeminiCheck = now;
-                
-                const bestBox = detections.boxes[bestDetectionIndex]; // נניח שזה אובייקט עם xmin, ymin וכו'
-                
-                // שליחה ל-Gemini ברקע (בלי לעצור את הוידאו)
-                checkWithGemini(video, bestBox);
-            }
-        }
-
-        // מחילים את ההזחה שנשמרה על התיבות לפני הציור
+        // שיבוט הנתונים והוספת ההזחה בבטחה
+        const adjustedBoxes = detections.boxes.map(box => {
+            // אם התיבה המקורית מהמודל היא NaN, נחזיר ערך 0 כדי לא לשבור את הציור
+            return {
+                xmin: isNaN(box.xmin) ? 0 : box.xmin + dx,
+                xmax: isNaN(box.xmax) ? 0 : box.xmax + dx,
+                ymin: isNaN(box.ymin) ? 0 : box.ymin + dy,
+                ymax: isNaN(box.ymax) ? 0 : box.ymax + dy
+            };
+        });
+        
         const adjustedDetections = {
             ...detections,
-            boxes: detections.boxes.map(box => ({
-                xmin: box.xmin + geminiOffset.dx,
-                xmax: box.xmax + geminiOffset.dx,
-                ymin: box.ymin + geminiOffset.dy,
-                ymax: box.ymax + geminiOffset.dy
-            }))
+            boxes: adjustedBoxes
         };
+        
+        // הדפסה לבדיקה בקונסול - תוכל לראות אם המספרים חזרו להיות תקינים
+        console.log("Adjusted Boxes sample:", adjustedDetections.boxes[0]);
 
         // ציור התיבות המוסטות
         drawBoxes(adjustedDetections);
