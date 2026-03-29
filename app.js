@@ -38,55 +38,47 @@ function startDetection() {
 
 async function detectFrame() {
     if (video.paused || video.ended) return;
+    
     frameCount++;
+
+    // 1. דילוג על פריימים - מריצים את המודל רק כל פריים שלישי
     if (frameCount % 3 === 0) {
-        // 1. עיבוד מקדים (Pre-processing)
-        const input = tf.tidy(() => {
+        
+        const detections = tf.tidy(() => {
+            // עיבוד מקדים (Pre-processing)
             let img = tf.browser.fromPixels(video);
-    
-            // אם התוצאות עדיין לא טובות, נסה להוסיף את השורה הבאה:
-            // img = img.reverse(2); // היפוך RGB ל-BGR
-    
-            return img.resizeBilinear([IMGSZ, IMGSZ])
-                      .toFloat()
-                      .div(255.0)
-                      .expandDims(0);
+            
+            // אם התוצאות הפוכות/לא טובות, בטל את ה-comment מהשורה הבאה:
+            // img = img.reverse(2); 
+            
+            const input = img.resizeBilinear([IMGSZ, IMGSZ])
+                             .toFloat()
+                             .div(255.0)
+                             .expandDims(0);
+
+            // 2. הרצת המודל (חייב להיות בתוך ה-tidy כדי ש-input ישוחרר אוטומטית)
+            const res = model.execute(input);
+
+            // 3. עיבוד תוצאות (Post-processing)
+            const rawBoxes = res[0];
+            const rawLogits = res[1];
+
+            // המרה לסיגמואיד כדי לטפל במספרים השליליים
+            const rawScores = tf.sigmoid(rawLogits);
+
+            // מחזירים רק מערכי JS פשוטים החוצה מה-tidy
+            return {
+                boxes: rawBoxes.squeeze().arraySync(),
+                scores: rawScores.squeeze().arraySync(),
+                classIds: new Array(rawScores.size).fill(0)
+            };
         });
-    
-    
-        // 2. הרצת המודל
-        const res = model.execute(input);
+
+        // 4. ציור התיבות על הקנבס
+        drawBoxes(detections);
     }
 
-    // 3. עיבוד תוצאות (Post-processing)
-    const detections = tf.tidy(() => {
-        // מכיוון ש-res הוא מערך, ניגש לאיברים שלו לפי אינדקס
-        // אינדקס 0 מכיל את התיבות (Boxes), אינדקס 1 מכיל את הציונים (Scores)
-        const rawBoxes = res[0];
-        const rawLogits = res[1];
-
-        // המרה לסיגמואיד כדי לטפל במספרים השליליים שראית
-        const rawScores = tf.sigmoid(rawLogits);
-
-        return {
-            // כאן אנחנו מפעילים את ה-squeeze על הטנזורים הספציפיים
-            boxes: rawBoxes.squeeze().arraySync(),
-            scores: rawScores.squeeze().arraySync(),
-            // במודל ראשים (קלאס יחיד), ה-ID הוא תמיד 0
-            classIds: new Array(rawScores.size).fill(0)
-        };
-    });
-
-    drawBoxes(detections);
-
-    input.dispose(); // האינפוט הוא טנזור בודד, זה תקין
-
-    if (Array.isArray(res)) {
-        res.forEach(t => t.dispose());
-    } else {
-        res.dispose();
-    }
-
+    // 5. בקשה לפריים הבא (קורה בכל פריים כדי לשמור על וידאו חלק)
     requestAnimationFrame(detectFrame);
 }
 
