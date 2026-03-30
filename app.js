@@ -156,7 +156,6 @@ function drawBoxes(detections) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const { boxes, scores } = detections;
-    console.log("Current boxes to draw:", boxes);
 
     for (let i = 0; i < scores.length; i++) {
         if (scores[i] > CONF_THRESHOLD) {
