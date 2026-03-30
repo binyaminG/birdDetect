@@ -117,6 +117,7 @@ async function detectFrame() {
                 classIds: new Array(rawScores.size).fill(0)
             };
         });
+        console.log("Detections raw from model:", detections.boxes[0]);
 
         // בדיקת הגנה: מוודאים ש-geminiOffset מכיל מספרים תקינים
         const dx = (typeof geminiOffset.dx === 'number' && !isNaN(geminiOffset.dx)) ? geminiOffset.dx : 0;
