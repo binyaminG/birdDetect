@@ -156,34 +156,42 @@ function drawBoxes(detections) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const { boxes, scores } = detections;
-    console.log(boxes);
+    console.log("Current boxes to draw:", boxes);
 
     for (let i = 0; i < scores.length; i++) {
         if (scores[i] > CONF_THRESHOLD) {
             
-            // קבלת הערכים המנורמלים (0-1) כפי שראינו בלוגים
-            let [x_center, y_center, width, height] = boxes[i];
+            // 1. חילוץ האובייקט (במקום מערך) כפי שראינו בלוגים
+            const { xmin, xmax, ymin, ymax } = boxes[i];
 
-            // 1. הגבלת המרכז לתוך גבולות הפריים (0 עד 1)
+            // 2. חישוב רוחב וגובה מנורמלים (0 עד 1)
+            const width = xmax - xmin;
+            const height = ymax - ymin;
+
+            // 3. חישוב מרכז התיבה
+            const x_center = xmin + (width / 2);
+            const y_center = ymin + (height / 2);
+
+            // 4. הגבלת המרכז לתוך גבולות הפריים (0 עד 1)
             // זה מונע מהריבוע "לטפס" או "לרדת" מחוץ לוידאו
             const safeX = Math.max(0, Math.min(x_center, 1));
             const safeY = Math.max(0, Math.min(y_center, 1));
 
-            // 2. חישוב מימדים סופיים בפיקסלים לפי גודל הקנבס האמיתי
+            // 5. חישוב מימדים סופיים בפיקסלים לפי גודל הקנבס האמיתי
             const w = width * canvas.width;
             const h = height * canvas.height;
 
-            // 3. חישוב הפינה השמאלית העליונה (x1, y1)
+            // 6. חישוב הפינה השמאלית העליונה (x1, y1) בפיקסלים
             // אנחנו מחסירים חצי מהרוחב/גובה מהמרכז המנורמל מוכפל בקנבס
             const x1 = (safeX * canvas.width) - (w / 2);
             const y1 = (safeY * canvas.height) - (h / 2);
 
-            // 4. ציור
+            // 7. ציור התיבה
             ctx.strokeStyle = "#00FF00";
             ctx.lineWidth = 3;
             ctx.strokeRect(x1, y1, w, h);
 
-            // הוספת אחוז הביטחון מעל הריבוע
+            // 8. הוספת אחוז הביטחון מעל הריבוע
             ctx.fillStyle = "#00FF00";
             ctx.font = "bold 16px Arial";
             ctx.fillText(`${(scores[i] * 100).toFixed(0)}%`, x1, y1 > 20 ? y1 - 5 : 20);
