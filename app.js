@@ -158,47 +158,45 @@ function drawBoxes(detections) {
 
     const { boxes, scores } = detections;
 
-    for (let i = 0; i < scores.length; i++) {
-        if (scores[i] > CONF_THRESHOLD) {
+    for (let i = 0; i < boxes.length; i++) {
+        // המערך שראינו בלוגים שלך!
+        const box = boxes[i];
+        
+        // הגנה: וודא שהאיבר הוא אכן מערך ויש בו לפחות 4 ערכים
+        if (!Array.isArray(box) || box.length < 4) continue;
+
+        // שליפת הנתונים לפי הסדר של YOLO
+        let [x_center, y_center, width, height, box_score] = box;
+
+        // שימוש ב-score הגבוה מבין השניים (זה שמהטנזור הנפרד או זה שבתוך הבוקס)
+        const finalScore = box_score || scores[i];
+
+        if (finalScore > CONF_THRESHOLD) {
             
-            // 1. חילוץ האובייקט (במקום מערך) כפי שראינו בלוגים
-            const { xmin, xmax, ymin, ymax } = boxes[i];
-
-            // 2. חישוב רוחב וגובה מנורמלים (0 עד 1)
-            const width = xmax - xmin;
-            const height = ymax - ymin;
-
-            // 3. חישוב מרכז התיבה
-            const x_center = xmin + (width / 2);
-            const y_center = ymin + (height / 2);
-
-            // 4. הגבלת המרכז לתוך גבולות הפריים (0 עד 1)
-            // זה מונע מהריבוע "לטפס" או "לרדת" מחוץ לוידאו
+            // 1. הגבלת המרכז לתוך גבולות הפריים (0 עד 1)
             const safeX = Math.max(0, Math.min(x_center, 1));
             const safeY = Math.max(0, Math.min(y_center, 1));
 
-            // 5. חישוב מימדים סופיים בפיקסלים לפי גודל הקנבס האמיתי
+            // 2. חישוב מימדים סופיים בפיקסלים לפי גודל הקנבס האמיתי
             const w = width * canvas.width;
             const h = height * canvas.height;
 
-            // 6. חישוב הפינה השמאלית העליונה (x1, y1) בפיקסלים
-            // אנחנו מחסירים חצי מהרוחב/גובה מהמרכז המנורמל מוכפל בקנבס
+            // 3. חישוב הפינה השמאלית העליונה (x1, y1) בפיקסלים
             const x1 = (safeX * canvas.width) - (w / 2);
             const y1 = (safeY * canvas.height) - (h / 2);
 
-            // 7. ציור התיבה
+            // 4. ציור התיבה
             ctx.strokeStyle = "#00FF00";
             ctx.lineWidth = 3;
             ctx.strokeRect(x1, y1, w, h);
 
-            // 8. הוספת אחוז הביטחון מעל הריבוע
+            // 5. הוספת אחוז הביטחון מעל הריבוע
             ctx.fillStyle = "#00FF00";
             ctx.font = "bold 16px Arial";
-            ctx.fillText(`${(scores[i] * 100).toFixed(0)}%`, x1, y1 > 20 ? y1 - 5 : 20);
+            ctx.fillText(`${(finalScore * 100).toFixed(0)}%`, x1, y1 > 20 ? y1 - 5 : 20);
         }
     }
 }
-
 
 
 setupApp();
