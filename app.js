@@ -123,27 +123,39 @@ async function detectFrame() {
         const dx = (typeof geminiOffset.dx === 'number' && !isNaN(geminiOffset.dx)) ? geminiOffset.dx : 0;
         const dy = (typeof geminiOffset.dy === 'number' && !isNaN(geminiOffset.dy)) ? geminiOffset.dy : 0;
         
-        // שיבוט הנתונים והוספת ההזחה בבטחה
+        // שיבוט הנתונים, הוספת ההזחה בבטחה ופירוק המערך
         const adjustedBoxes = detections.boxes.map(box => {
-            // אם התיבה המקורית מהמודל היא NaN, נחזיר ערך 0 כדי לא לשבור את הציור
-            return {
-                xmin: isNaN(box.xmin) ? 0 : box.xmin + dx,
-                xmax: isNaN(box.xmax) ? 0 : box.xmax + dx,
-                ymin: isNaN(box.ymin) ? 0 : box.ymin + dy,
-                ymax: isNaN(box.ymax) ? 0 : box.ymax + dy
-            };
-        });
-        
-        const adjustedDetections = {
-            ...detections,
-            boxes: adjustedBoxes
-        };
-        
-        // הדפסה לבדיקה בקונסול - תוכל לראות אם המספרים חזרו להיות תקינים
-        console.log("Adjusted Boxes sample:", adjustedDetections.boxes[0]);
+       // שליפת הנתונים מהמערך כפי שהמודל פולט
+       let [x_center, y_center, width, height, confidence] = box;
 
-        // ציור התיבות המוסטות
-        drawBoxes(adjustedDetections);
+    // הגנה מפני NaN (אם משהו השתבש, נחזיר 0)
+    x_center = isNaN(x_center) ? 0 : x_center;
+    y_center = isNaN(y_center) ? 0 : y_center;
+    width = isNaN(width) ? 0 : width;
+    height = isNaN(height) ? 0 : height;
+
+    // הוספת ההזחה של גוגל למרכז התיבה (מחושב בבטחה)
+    const dx = (typeof geminiOffset.dx === 'number' && !isNaN(geminiOffset.dx)) ? geminiOffset.dx : 0;
+    const dy = (typeof geminiOffset.dy === 'number' && !isNaN(geminiOffset.dy)) ? geminiOffset.dy : 0;
+
+    // מחזירים מערך מעודכן באותו מבנה בדיוק!
+    return [
+        x_center + dx,
+        y_center + dy,
+        width,
+        height,
+        confidence
+    ];
+});
+
+const adjustedDetections = {
+    ...detections,
+    boxes: adjustedBoxes
+};
+
+// ציור התיבות המעודכנות
+drawBoxes(adjustedDetections);
+
     }
     // 5. בקשה לפריים הבא - תמיד בסוף!
     requestAnimationFrame(detectFrame);
